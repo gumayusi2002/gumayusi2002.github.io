@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>ArcGIS Maps SDK for JavaScript Tutorials: Display a map</title>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 96%;
+        width: 100%;
+      }
+
+      #header{
+        height: 50px;
+        background-color: rgb(34, 237, 3);
+        display: flex;
+        align-items: center;
+        padding: 0 10px; 
+        justify-content:space-between;
+      }
+      #container{
+        height: calc(100vh - 50px);
+        display: flex;
+      }
+      #title{
+        font-family: 宋体;
+        font-size: 20px;
+        margin-right: auto;
+      }
+      #LayerListDiv{
+        flex: 1;
+        position: relative;
+        
+        background-color: white;
+        overflow: auto;
+      }
+      #layerListContainer {
+        height: calc(100% - 40px);
+        width: 100%;
+        background-color: #f2f2f2;
+        overflow: auto;
+      }
+      #layerListDiv {
+        position: relative;
+        height: 45%; 
+        background-color: white;
+      }
+      #legendContainer {
+        height: calc(100% - 40px);
+        width: 100%;
+        background-color: #f2f2f2;
+      }
+      
+    </style>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.26/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.26/"></script>
+    <script>
+        require([
+          "esri/config",
+           "esri/Map", 
+           "esri/views/MapView",
+           "esri/layers/FeatureLayer",
+           "esri/widgets/Legend",
+          "esri/widgets/ScaleBar",
+          "esri/widgets/BasemapGallery",
+        "esri/widgets/Expand",
+        "esri/portal/Portal",
+        "esri/widgets/LayerList",
+        "esri/widgets/Search",
+        "esri/widgets/Home",
+        "esri/geometry/Point",
+        "esri/rest/support/Query"
+          ], 
+        function(esriConfig, Map, MapView,FeatureLayer,Legend,ScaleBar,BasemapGallery,Expand,Portal,LayerList,search,Home,Point,query) {
+          esriConfig.apiKey = "AAPK8b9543718e834153a0b59e78b97af460ievzmKujL9DfIBNuZhP8tLhJNJnKpUGjpUQup7xaGHUQoa0kZu686G0jgLAG8szA"
+          var  Layer1 = new FeatureLayer({
+            url: "https://www.geosceneonline.cn/server/rest/services/Hosted/中国各省年水资源总量数据/FeatureServer/0",
+            
+            popupTemplate :{
+          
+              title: "{省}水资源量",
+              outFields:["*"],
+              content: [
+              {
+                type: "fields",
+                fieldInfos: [
+                {
+                  fieldName:"省会城市",
+                  label:"省会:"
+                },
+                {
+                  fieldName: "2013年",
+                  label: "2013年水资源量:"
+                },
+                {
+                fieldName: "2014年",
+                label: "2014年水资源量:"
+                },
+                {
+                fieldName: "2015年",
+                label: "2015年水资源量:"
+                },
+                {
+                fieldName: "2016年",
+                label: "2016年水资源量:"
+                },
+                {
+                fieldName: "2017年",
+                label: "2017年水资源量:"
+                },
+                {
+                fieldName: "2018年",
+                label: "2018年水资源量:"
+                }
+
+                ]
+              }
+              ],
+              
+            }
+          });  
+          
+          var  map1 = new Map({
+          basemap: "streets-navigation-vector" ,
+          layers :[Layer1]
+          });
+          Layer1.load().then(() => {
+            map.tables.add(Layer1);
+          });
+          
+          var  view1 = new MapView({
+            map: map1,
+            center: [109,34.5], // Longitude, latitude
+            zoom: 3, // Zoom level
+            container: "viewDiv" // Div element
+        });
+        var point = new Point({
+          longitude: 119,
+          latitude: 34
+        });
+        onSelectChange=function(){
+          const layerSelect = document.getElementById("Selector");
+          const layerSelectVal=layerSelect.value;
+          let query = Layer1.createQuery();
+          query.where = "省 = '" + layerSelectVal + "'";
+          query.outFields = ["2013年","2014年","2015年","2016年","2017年","2018年"];
+          Layer1.queryFeatures()
+            .then(function(lay){
+              // returns a feature set with features containing the following attributes
+              // STATE_NAME, COUNTY_NAME, POPULATION, POP_DENSITY
+              for(let i=0;i<lay.features.length;i++){
+                if(lay.features[i].attributes.省===layerSelectVal){
+                  var att=lay.features[i].attributes;
+                  console.log(att);
+                  point.latitude=att.纬度;
+                  point.longitude=att.经度;
+                  view1.goTo({
+                    center: point,
+                    zoom: 8,
+                    duration: 2000  
+                  });
+                }
+              }
+              console.log(lay.features);              
+          });
+        }
+        const homeWidge = new Home({
+          view: view1
+        });
+        view1.ui.add(homeWidge, {
+          position: 'top-left'
+        });
+      
+        const search1 = new search({
+          view :view1,
+          
+          container: 'searchWrapper'
+        })
+        view1.ui.add(search1,{
+          position: 'none'
+        })
+     const basemapGallery = new BasemapGallery({
+        view: view1,
+        container: 'basemapDiv'
+      });
+      view1.ui.add(basemapGallery, "top-right");
+      const switchBasemapButton = document.getElementById('switch-basemap')
+        switchBasemapButton.addEventListener('click', () => {
+            basemapGallery.visible = !basemapGallery.visible
+          })
+        var  legend1 = new Legend({
+          view : view1,
+          layerInfos:[{
+            layer :Layer1,
+            title :"水资源量"
+
+          }],
+          container:'legendContainer'
+        });
+        
+        
+        var  scalebar1 = new ScaleBar({
+          view : view1 ,
+          style:"ruler",
+          unit:"dual"
+        });
+        view1.ui.add(scalebar1,{position:"bottom-left"});
+        const layerList1 = new LayerList({
+          view: view1,
+          container: 'layerListContainer'
+        })
+        
+        view1.ui.add(layerList1, {
+          position: 'none'
+        })
+        
+        var layerList = new LayerList({
+          
+          view: view,
+          container:'layerListContainer'
+        });
+
+        var layerListExpand = new Expand({
+          view: view,
+          content: basemapGallery
+        });
+        
+        
+        
+      });
+        
+    </script>
+        
+
+        
+        
+  </head>
+  <body>
+    <div id="header">
+      <div id="title">13-18年全国各省水资源量</div>
+      <div id="querycity" style="margin-right: 20px; display: flex">
+        <select id="Selector" style="height:30px;" onchange="onSelectChange()">
+          <option value="">请选择查询的省份（不含港澳台）</option>
+          <option value="重庆市">重庆市</option>
+          <option value="上海市">上海市</option>
+          <option value="北京市">北京市</option>
+          <option value="四川省">四川省</option>
+          <option value="河北省">河北省</option>
+          <option value="天津市">天津市</option>
+          <option value="黑龙江省">黑龙江省</option>
+          <option value="广东省">广东省</option>
+          <option value="湖北省">湖北省</option>
+          <option value="陕西省">陕西省</option>
+          <option value="河南省">河南省</option>
+          <option value="吉林省">吉林省</option>
+          <option value="辽宁省">辽宁省</option>
+          <option value="广西壮族自治区">广西壮族自治区</option>
+          <option value="安徽省">安徽省</option>
+          <option value="江苏省">江苏省</option>
+          <option value="福建省">福建省</option>
+          <option value="湖南省">湖南省</option>
+          <option value="浙江省">浙江省</option>
+          <option value="山东省">山东省</option>
+          <option value="云南省">云南省</option>
+          <option value="江西省">江西省</option>
+          <option value="贵州省">贵州省</option>
+          <option value="山西省">山西省</option>
+          <option value="甘肃省">甘肃省</option>
+          <option value="新疆维吾尔自治区">新疆维吾尔自治区</option>
+          <option value="内蒙古自治区">内蒙古自治区</option>
+          <option value="广西壮族自治区">广西壮族自治区</option>
+          <option value="宁夏回族自治区">宁夏回族自治区</option>
+          <option value="海南省">海南省</option>
+          <option value="西藏自治区">西藏自治区</option>
+        </select>
+      </div>
+      <div id="searchWrapper" style="margin-right: 20px"></div>
+      <button id="switch-basemap" style="margin-right: 10px">底图库</button>
+    </div>
+    <div id="container">
+      <div id="sideBar">
+        <div id="LayerListDiv">
+          <div style="line-height: 40px; padding: 0 10px;background-color: rgb(135, 235, 143)" >图层列表</div>
+          <div id="layerListContainer"></div>
+        </div>
+        <div id="LegendDiv">
+          <div style="line-height: 40px; padding: 0 10px;background-color: skyblue;">图例</div>
+          <div id="legendContainer"></div>
+        </div>
+      </div>
+      <div id="viewDiv"></div>
+    </div>
+    
+  </body>
+</.html>
